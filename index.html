@@ -4628,9 +4628,26 @@ const RECIPE_CATS=[
   {id:'hizli',label:'⚡ Hızlı',color:'#5b9cf6'},
   {id:'sebze',label:'🥬 Sebze',color:'#22d3ee'},
   {id:'vegan',label:'🌱 Vegan',color:'#3dd68c'},
+  {id:'sandvic',label:'🥪 Sandviçler',color:'#f0a030'},
+  {id:'salata',label:'🥗 Salatalar',color:'#3dd68c'},
   {id:'hamur',label:'🍞 Hamur İşi',color:'#f0a030'},
-  {id:'meze',label:'🫒 Mezeler',color:'#22d3ee'}
+  {id:'meze',label:'🫒 Mezeler',color:'#22d3ee'},
+  {id:'_protein',label:'💪 Yüksek Proteinli',color:'#ff7a7a',virtual:true},
+  {id:'_karb',label:'⚡ Yüksek Karbonhidrat',color:'#22d3ee',virtual:true}
 ];
+
+function getRecipesForCat(catObj){
+  if(!catObj.virtual) return RECIPES.filter(function(r){return r.cat===catObj.id;});
+  if(catObj.id==='_protein') return RECIPES.filter(function(r){
+    if(!r.cal||!r.prot)return false;
+    return (r.prot*4/r.cal)>=0.3;
+  });
+  if(catObj.id==='_karb') return RECIPES.filter(function(r){
+    if(!r.cal||!r.carb)return false;
+    return (r.carb*4/r.cal)>=0.5;
+  });
+  return [];
+}
 
 async function filterRecipes(cat){
   _currentRecipeCat=cat||'all';
@@ -4650,10 +4667,9 @@ function renderCategoryRows(){
     container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:.82rem">📭 Henüz tarif eklenmemiş</div>';
     return;
   }
-  const catLabels={fit:'💪 Fit',klasik:'🍲 Klasik',hizli:'⚡ Hızlı',vegan:'🌱 Vegan',sebze:'🥬 Sebze',corba:'🍲 Çorba',tatli:'🍮 Tatlı',hamur:'🍞 Hamur İşi'};
   let html='';
   RECIPE_CATS.forEach(function(cat){
-    const items=RECIPES.filter(function(r){return r.cat===cat.id;});
+    const items=getRecipesForCat(cat);
     if(!items.length)return;
     html+=`<div style="margin-bottom:16px">
       <div onclick="openRecipeCatModal('${cat.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:0 18px 8px;cursor:pointer">
@@ -4688,7 +4704,8 @@ function renderCategoryRows(){
 // ═══ KATEGORİ MODAL ═══
 function openRecipeCatModal(catId){
   const cat=RECIPE_CATS.find(function(c){return c.id===catId;});
-  const items=RECIPES.filter(function(r){return r.cat===catId;});
+  if(!cat)return;
+  const items=getRecipesForCat(cat);
   if(!items.length)return;
   document.getElementById('catModalTitle').textContent=(cat?cat.label:'📂 Kategori');
   const list=document.getElementById('catModalList');
