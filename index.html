@@ -898,7 +898,10 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         </div>
       </div>
 
-      <!-- ═══ ÖNE ÇIKAN CAROUSEL ═══ -->
+      <!-- ═══ POPÜLER TARİFLER CAROUSEL ═══ -->
+      <div style="padding:0 18px 8px;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:800;font-size:.88rem">🔥 Popüler Tarifler</div>
+      </div>
       <div id="recipeCarousel" style="margin:0 0 6px;position:relative">
         <div id="carouselTrack" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:0;scroll-behavior:smooth;padding:0 16px"></div>
         <div id="carouselDots" style="display:flex;justify-content:center;gap:5px;margin-top:10px"></div>
@@ -944,12 +947,16 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
     </div>
 
     <!-- ═══ ARAMA MODAL ═══ -->
-    <div class="modal-overlay" id="recipeSearchModal" onclick="if(event.target===this)closeRecipeSearchModal()">
+    <div class="modal-overlay" id="recipeSearchModal" onclick="if(event.target===this)closeRecipeSearchModal()" style="align-items:stretch">
       <div class="modal-content" style="width:100%">
-        <div class="modal" style="max-height:92vh;padding:16px 20px 28px">
-          <div class="modal-handle"></div>
-          <input type="text" id="recipeSearchInput" class="search-box" placeholder="🔍 Tarif adı ara..." oninput="onRecipeSearch()" autofocus style="margin-bottom:10px;color:var(--text)">
-          <div id="recipeSearchResults" style="overflow-y:auto;max-height:70vh"></div>
+        <div class="modal" style="max-height:100vh;height:100vh;padding:0;border-radius:0;display:flex;flex-direction:column">
+          <div style="padding:max(12px,env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0">
+            <div style="display:flex;align-items:center;gap:10px">
+              <button onclick="closeRecipeSearchModal()" style="background:none;border:none;font-size:1.1rem;color:var(--text2);cursor:pointer;padding:4px">✕</button>
+              <input type="text" id="recipeSearchInput" placeholder="Tarif adı ara..." oninput="onRecipeSearch()" autofocus style="flex:1;font-family:var(--font,system-ui);font-size:.9rem;font-weight:600;border:none;background:transparent;color:var(--text);outline:none;padding:10px 0">
+            </div>
+          </div>
+          <div id="recipeSearchResults" style="flex:1;overflow-y:auto;padding:8px 16px;-webkit-overflow-scrolling:touch"></div>
         </div>
       </div>
     </div>
@@ -4615,20 +4622,25 @@ function renderCategoryRows(){
     if(!items.length)return;
     html+=`<div style="margin-bottom:16px">
       <div onclick="openRecipeCatModal('${cat.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:0 18px 8px;cursor:pointer">
-        <div style="font-weight:800;font-size:.88rem">${cat.label} <span style="font-size:.68rem;color:var(--text2);font-weight:600">(${items.length})</span></div>
+        <div style="font-weight:800;font-size:.88rem">${cat.label}</div>
         <div style="font-size:.72rem;color:var(--accent);font-weight:700">Tümünü Gör ›</div>
       </div>
-      <div style="display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:10px;padding:0 18px;scroll-snap-type:x proximity" class="cat-row-track">
+      <div style="display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:12px;padding:0 18px;scroll-snap-type:x mandatory" class="cat-row-track">
         ${items.slice(0,10).map(function(r){
           const idx=RECIPES.findIndex(function(x){return(x.id&&x.id===r.id)||x.name===r.name;});
-          return `<div onclick="openRecipeDetail(${idx})" style="flex:0 0 130px;scroll-snap-align:start;cursor:pointer;border-radius:12px;overflow:hidden;background:var(--card2);border:1px solid var(--border);transition:transform .15s" onpointerdown="this.style.transform='scale(.96)'" onpointerup="this.style.transform=''" onpointerleave="this.style.transform=''">
+          return `<div onclick="openRecipeDetail(${idx})" style="flex:0 0 calc(100% - 36px);scroll-snap-align:start;cursor:pointer;border-radius:14px;overflow:hidden;background:var(--card2);border:1px solid var(--border);transition:transform .15s" onpointerdown="this.style.transform='scale(.97)'" onpointerup="this.style.transform=''" onpointerleave="this.style.transform=''">
             ${r.img
-              ?`<div style="height:90px;overflow:hidden"><img src="${r.img}" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy" onerror="this.parentElement.innerHTML='<div style=\\'height:90px;display:flex;align-items:center;justify-content:center;font-size:2rem;background:var(--glass)\\'>${r.emoji||'🍽️'}</div>'"></div>`
-              :`<div style="height:90px;display:flex;align-items:center;justify-content:center;font-size:2rem;background:var(--glass)">${r.emoji||'🍽️'}</div>`
+              ?`<div style="height:150px;overflow:hidden;position:relative"><img src="${r.img}" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy" onerror="this.parentElement.innerHTML='<div style=\\'height:150px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;background:var(--glass)\\'>${r.emoji||'🍽️'}</div>'"><div style="position:absolute;bottom:0;left:0;right:0;height:50px;background:linear-gradient(transparent,rgba(0,0,0,.4))"></div></div>`
+              :`<div style="height:150px;display:flex;align-items:center;justify-content:center;font-size:2.5rem;background:var(--glass)">${r.emoji||'🍽️'}</div>`
             }
-            <div style="padding:7px 8px">
-              <div style="font-weight:700;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
-              <div style="font-size:.58rem;color:var(--text2);margin-top:2px"><span style="color:var(--accent);font-weight:700">${r.cal||'—'}</span> kcal · ${r.time||'—'}dk</div>
+            <div style="padding:10px 12px">
+              <div style="font-weight:700;font-size:.85rem;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+              <div style="display:flex;gap:6px;align-items:center;font-size:.62rem;font-weight:600">
+                <span style="color:var(--accent);font-weight:800">${r.cal||'—'} kcal</span>
+                <span style="color:var(--text2)">·</span>
+                <span style="color:var(--text2)">⏱ ${r.time||'—'}dk</span>
+                ${r.prot?`<span style="color:var(--text2)">·</span><span style="color:#ff7a7a">P${r.prot}g</span>`:''}
+              </div>
             </div>
           </div>`;
         }).join('')}
@@ -4643,7 +4655,7 @@ function openRecipeCatModal(catId){
   const cat=RECIPE_CATS.find(function(c){return c.id===catId;});
   const items=RECIPES.filter(function(r){return r.cat===catId;});
   if(!items.length)return;
-  document.getElementById('catModalTitle').textContent=(cat?cat.label:'📂 Kategori')+' ('+items.length+')';
+  document.getElementById('catModalTitle').textContent=(cat?cat.label:'📂 Kategori');
   const list=document.getElementById('catModalList');
   list.innerHTML=items.map(function(r){
     const idx=RECIPES.findIndex(function(x){return(x.id&&x.id===r.id)||x.name===r.name;});
@@ -4719,6 +4731,16 @@ function onRecipeSearch(){
 
 // ═══ CAROUSEL RENDER ═══
 let _carouselInterval=null;
+// Popülerlik sayacı
+function getRecipeViews(){
+  try{return JSON.parse(localStorage.getItem('fs_recipe_views')||'{}');}catch(e){return {};}
+}
+function trackRecipeView(name){
+  var views=getRecipeViews();
+  views[name]=(views[name]||0)+1;
+  localStorage.setItem('fs_recipe_views',JSON.stringify(views));
+}
+
 function renderRecipeCarousel(recipes){
   const track=document.getElementById('carouselTrack');
   const dots=document.getElementById('carouselDots');
@@ -4732,10 +4754,15 @@ function renderRecipeCarousel(recipes){
   }
   document.getElementById('recipeCarousel').style.display='block';
 
-  const shuffled=[...withImg].sort(()=>Math.random()-.5).slice(0,8);
-  const catLabels={fit:'💪 Fit',klasik:'🍲 Klasik',hizli:'⚡ Hızlı',vegan:'🌱 Vegan',sebze:'🥬 Sebze',corba:'🍲 Çorba',tatli:'🍮 Tatlı'};
+  // Popülerliğe göre sırala (en çok görüntülenen önce), sonra karıştır
+  const views=getRecipeViews();
+  const sorted=[...withImg].sort(function(a,b){return(views[b.name]||0)-(views[a.name]||0);});
+  // En popüler 8'i al, eğer görüntülenme yoksa rastgele
+  const hasViews=sorted.some(function(r){return(views[r.name]||0)>0;});
+  const picked=hasViews?sorted.slice(0,8):[...withImg].sort(()=>Math.random()-.5).slice(0,8);
+  const catLabels={fit:'💪 Fit',klasik:'🍲 Klasik',hizli:'⚡ Hızlı',vegan:'🌱 Vegan',sebze:'🥬 Sebze',corba:'🍲 Çorba',tatli:'🍮 Tatlı',meze:'🫒 Meze'};
 
-  track.innerHTML=shuffled.map((r,i)=>{
+  track.innerHTML=picked.map((r,i)=>{
     const idx=RECIPES.findIndex(x=>(x.id&&x.id===r.id)||x.name===r.name);
     const score=getRecipeScore(r);
     const sColor=getScoreColor(score);
@@ -4757,7 +4784,7 @@ function renderRecipeCarousel(recipes){
     </div>`;
   }).join('');
 
-  dots.innerHTML=shuffled.map((_,i)=>`<div class="c-dot${i===0?' active':''}" onclick="scrollCarouselTo(${i})"></div>`).join('');
+  dots.innerHTML=picked.map((_,i)=>`<div class="c-dot${i===0?' active':''}" onclick="scrollCarouselTo(${i})"></div>`).join('');
 
   track.onscroll=function(){
     const scrollLeft=track.scrollLeft;
@@ -4770,7 +4797,7 @@ function renderRecipeCarousel(recipes){
   let autoIdx=0;
   _carouselInterval=setInterval(()=>{
     if(!document.getElementById('page-oneri')?.classList.contains('active'))return;
-    autoIdx=(autoIdx+1)%shuffled.length;
+    autoIdx=(autoIdx+1)%picked.length;
     scrollCarouselTo(autoIdx);
   },4500);
 }
@@ -4787,10 +4814,11 @@ var _openRecipeIdx = -1;
 function openRecipeDetail(idx){
   const r=RECIPES[idx];if(!r)return;
   _openRecipeIdx=idx;
+  trackRecipeView(r.name);
   const score=getRecipeScore(r);
   const sColor=getScoreColor(score);
   const sLabel=getScoreLabel(score);
-  const catLabels={fit:'💪 Fit',klasik:'🍲 Klasik',hizli:'⚡ Hızlı',vegan:'🌱 Vegan',sebze:'🥬 Sebze',corba:'🍲 Çorba'};
+  const catLabels={fit:'💪 Fit',klasik:'🍲 Klasik',hizli:'⚡ Hızlı',vegan:'🌱 Vegan',sebze:'🥬 Sebze',corba:'🍲 Çorba',tatli:'🍮 Tatlı',meze:'🫒 Meze'};
   const tags=(r.tags||[]).map(t=>({kolay:'⭐ Kolay',hizli:'⚡ Hızlı',vejetaryen:'🌿 Vejetaryen',vegan:'🌱 Vegan',proteinli:'💪 Proteinli',ekonomik:'💰 Ekonomik',saglikli:'✅ Sağlıklı'}[t]||t)).join(' · ');
 
   // Makro bar yüzdeleri
