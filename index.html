@@ -887,14 +887,20 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       <button style="width:100%;padding:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:var(--radius-sm);font-family:var(--font,system-ui);font-weight:800;font-size:.85rem;cursor:pointer;box-shadow:0 4px 12px rgba(255,107,61,.2)" onclick="generateDailyPlan()">📅 Tam Gün Planı Oluştur</button>
       <div id="dailyPlanResult"></div>
     </div>
-    <div class="profile-card" style="animation-delay:.06s">
-      <h3>📖 Tarifler</h3>
+    <div class="profile-card" style="animation-delay:.06s;padding:14px 0 18px">
+      <h3 style="padding:0 18px;margin-bottom:10px">📖 Tarifler</h3>
 
-      <!-- ═══ CAROUSEL ═══ -->
-      <div id="recipeCarousel" style="margin:0 -20px 14px;position:relative">
-        <div id="carouselTrack" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:0;scroll-behavior:smooth;padding:0 16px">
+      <!-- ═══ ARAMA ═══ -->
+      <div style="padding:0 18px 10px">
+        <div onclick="openRecipeSearchModal()" style="display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--glass);border:1.5px solid var(--border);border-radius:12px;cursor:pointer;transition:all .15s" onpointerdown="this.style.borderColor='var(--accent)'" onpointerup="this.style.borderColor='var(--border)'" onpointerleave="this.style.borderColor='var(--border)'">
+          <span style="font-size:.9rem;opacity:.5">🔍</span>
+          <span style="font-size:.82rem;color:var(--text2);font-weight:500">Tarif ara...</span>
         </div>
-        <!-- Dot indicators -->
+      </div>
+
+      <!-- ═══ ÖNE ÇIKAN CAROUSEL ═══ -->
+      <div id="recipeCarousel" style="margin:0 0 6px;position:relative">
+        <div id="carouselTrack" style="display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:0;scroll-behavior:smooth;padding:0 16px"></div>
         <div id="carouselDots" style="display:flex;justify-content:center;gap:5px;margin-top:10px"></div>
       </div>
       <style>
@@ -912,23 +918,40 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
         .rc-card .rc-cat{position:absolute;top:12px;left:12px;font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:6px;backdrop-filter:blur(8px);background:rgba(0,0,0,.35);color:#fff;border:1px solid rgba(255,255,255,.12)}
         .c-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:all .25s;cursor:pointer}
         .c-dot.active{background:var(--accent);width:20px;border-radius:4px}
+        .cat-row-track::-webkit-scrollbar{display:none}
       </style>
 
-      <!-- ═══ KATEGORİ FİLTRE ═══ -->
-      <div style="display:flex;gap:6px;margin-bottom:10px;overflow-x:auto">
-        <button class="cat-pill active" onclick="filterRecipes('all')" id="rcAll">Tümü</button>
-        <button class="cat-pill" onclick="filterRecipes('fit')" id="rcFit">💪 Fit</button>
-        <button class="cat-pill" onclick="filterRecipes('klasik')" id="rcKlasik">🍲 Klasik</button>
-        <button class="cat-pill" onclick="filterRecipes('hizli')" id="rcHizli">⚡ Hızlı</button>
-        <button class="cat-pill" onclick="filterRecipes('vegan')" id="rcVegan">🌱 Vegan</button>
-        <button class="cat-pill" onclick="filterRecipes('sebze')" id="rcSebze">🥬 Sebze</button>
-        <button class="cat-pill" onclick="filterRecipes('corba')" id="rcCorba">🍲 Çorba</button>
-        <button class="cat-pill" onclick="filterRecipes('tatli')" id="rcTatli">🍮 Tatlı</button>
-      </div>
+      <!-- ═══ KATEGORİ SATIRLARI ═══ -->
+      <div id="recipeCatRows"></div>
+    </div>
 
-      <!-- ═══ LİSTE ═══ -->
-      <div id="recipeList" style="max-height:420px;overflow-y:auto;overscroll-behavior:contain;scroll-snap-type:y proximity;-webkit-overflow-scrolling:touch;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--glass);padding:4px"></div>
-      <div id="recipePageInfo" style="text-align:center;font-size:.68rem;color:var(--text2);margin-top:8px;font-weight:600"></div>
+    <!-- GİZLİ: eski liste (filterRecipes uyumluluğu için) -->
+    <div id="recipeList" style="display:none"></div>
+    <div id="recipePageInfo" style="display:none"></div>
+
+    <!-- ═══ KATEGORİ MODAL ═══ -->
+    <div class="modal-overlay" id="recipeCatModal" onclick="if(event.target===this)closeRecipeCatModal()">
+      <div class="modal-content" style="width:100%">
+        <div class="modal" style="max-height:92vh;padding:16px 0 28px">
+          <div class="modal-handle"></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:0 20px 12px">
+            <h2 id="catModalTitle" style="margin:0">📂 Kategori</h2>
+            <button onclick="closeRecipeCatModal()" style="background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:5px 12px;font-family:var(--font,system-ui);font-size:.75rem;font-weight:700;color:var(--text2);cursor:pointer">Kapat</button>
+          </div>
+          <div id="catModalList" style="padding:0 16px;overflow-y:auto;max-height:75vh"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ ARAMA MODAL ═══ -->
+    <div class="modal-overlay" id="recipeSearchModal" onclick="if(event.target===this)closeRecipeSearchModal()">
+      <div class="modal-content" style="width:100%">
+        <div class="modal" style="max-height:92vh;padding:16px 20px 28px">
+          <div class="modal-handle"></div>
+          <input type="text" id="recipeSearchInput" class="search-box" placeholder="🔍 Tarif adı ara..." oninput="onRecipeSearch()" autofocus style="margin-bottom:10px;color:var(--text)">
+          <div id="recipeSearchResults" style="overflow-y:auto;max-height:70vh"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -4555,70 +4578,143 @@ function getScoreLabel(s){
   if(s>=80)return'Mükemmel';if(s>=65)return'İyi';if(s>=50)return'Orta';return'Düşük';
 }
 
+const RECIPE_CATS=[
+  {id:'klasik',label:'🍲 Klasik',color:'#ff6b3d'},
+  {id:'fit',label:'💪 Fit',color:'#3dd68c'},
+  {id:'corba',label:'🍲 Çorbalar',color:'#f0a030'},
+  {id:'tatli',label:'🍮 Tatlılar',color:'#a07cf8'},
+  {id:'hizli',label:'⚡ Hızlı',color:'#5b9cf6'},
+  {id:'sebze',label:'🥬 Sebze',color:'#22d3ee'},
+  {id:'vegan',label:'🌱 Vegan',color:'#3dd68c'},
+  {id:'hamur',label:'🍞 Hamur İşi',color:'#f0a030'},
+  {id:'meze',label:'🫒 Mezeler',color:'#22d3ee'}
+];
+
 async function filterRecipes(cat){
   _currentRecipeCat=cat||'all';
-  const container=document.getElementById('recipeList');
-  const pageInfo=document.getElementById('recipePageInfo');
-  if(!container)return;
-
   if(!_recipesLoaded || !RECIPES.length){
-    container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:.82rem">🔄 Tarifler yükleniyor...</div>';
     await loadRecipesFromFirebase();
   }
+  // Öne çıkan carousel
+  renderRecipeCarousel(RECIPES);
+  // Kategori satırları
+  renderCategoryRows();
+}
 
-  const catBtns=['rcAll','rcFit','rcKlasik','rcHizli','rcVegan','rcSebze','rcCorba','rcTatli'];
-  catBtns.forEach(id=>{const el=document.getElementById(id);if(el)el.classList.remove('active')});
-  const btnMap={all:'rcAll',fit:'rcFit',klasik:'rcKlasik',hizli:'rcHizli',vegan:'rcVegan',sebze:'rcSebze',corba:'rcCorba',tatli:'rcTatli'};
-  const activeBtn=document.getElementById(btnMap[cat]);if(activeBtn)activeBtn.classList.add('active');
-
-  const filtered=cat==='all'?RECIPES:RECIPES.filter(r=>r.cat===cat);
-
-  // ═══ CAROUSEL ═══
-  renderRecipeCarousel(filtered);
-
-  if(pageInfo)pageInfo.textContent=filtered.length+' tarif listeleniyor';
-
+function renderCategoryRows(){
+  const container=document.getElementById('recipeCatRows');
+  if(!container)return;
   if(!RECIPES.length){
-    container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:.82rem">📭 Henüz tarif eklenmemiş.<br><span style="font-size:.72rem;margin-top:6px;display:block">Admin panelinden tarif ekleyebilirsin.</span></div>';
-    if(pageInfo)pageInfo.textContent='';
+    container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:.82rem">📭 Henüz tarif eklenmemiş</div>';
     return;
   }
+  const catLabels={fit:'💪 Fit',klasik:'🍲 Klasik',hizli:'⚡ Hızlı',vegan:'🌱 Vegan',sebze:'🥬 Sebze',corba:'🍲 Çorba',tatli:'🍮 Tatlı',hamur:'🍞 Hamur İşi'};
+  let html='';
+  RECIPE_CATS.forEach(function(cat){
+    const items=RECIPES.filter(function(r){return r.cat===cat.id;});
+    if(!items.length)return;
+    html+=`<div style="margin-bottom:16px">
+      <div onclick="openRecipeCatModal('${cat.id}')" style="display:flex;justify-content:space-between;align-items:center;padding:0 18px 8px;cursor:pointer">
+        <div style="font-weight:800;font-size:.88rem">${cat.label} <span style="font-size:.68rem;color:var(--text2);font-weight:600">(${items.length})</span></div>
+        <div style="font-size:.72rem;color:var(--accent);font-weight:700">Tümünü Gör ›</div>
+      </div>
+      <div style="display:flex;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;gap:10px;padding:0 18px;scroll-snap-type:x proximity" class="cat-row-track">
+        ${items.slice(0,10).map(function(r){
+          const idx=RECIPES.findIndex(function(x){return(x.id&&x.id===r.id)||x.name===r.name;});
+          return `<div onclick="openRecipeDetail(${idx})" style="flex:0 0 130px;scroll-snap-align:start;cursor:pointer;border-radius:12px;overflow:hidden;background:var(--card2);border:1px solid var(--border);transition:transform .15s" onpointerdown="this.style.transform='scale(.96)'" onpointerup="this.style.transform=''" onpointerleave="this.style.transform=''">
+            ${r.img
+              ?`<div style="height:90px;overflow:hidden"><img src="${r.img}" style="width:100%;height:100%;object-fit:cover;display:block" loading="lazy" onerror="this.parentElement.innerHTML='<div style=\\'height:90px;display:flex;align-items:center;justify-content:center;font-size:2rem;background:var(--glass)\\'>${r.emoji||'🍽️'}</div>'"></div>`
+              :`<div style="height:90px;display:flex;align-items:center;justify-content:center;font-size:2rem;background:var(--glass)">${r.emoji||'🍽️'}</div>`
+            }
+            <div style="padding:7px 8px">
+              <div style="font-weight:700;font-size:.72rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+              <div style="font-size:.58rem;color:var(--text2);margin-top:2px"><span style="color:var(--accent);font-weight:700">${r.cal||'—'}</span> kcal · ${r.time||'—'}dk</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+  container.innerHTML=html;
+}
 
-  if(!filtered.length){
-    container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:.82rem">Bu kategoride tarif yok</div>';
-    if(pageInfo)pageInfo.textContent='';
-    return;
-  }
-
-  container.innerHTML=filtered.map((r,i)=>{
-    const idx=RECIPES.findIndex(x=>(x.id&&x.id===r.id)||x.name===r.name);
+// ═══ KATEGORİ MODAL ═══
+function openRecipeCatModal(catId){
+  const cat=RECIPE_CATS.find(function(c){return c.id===catId;});
+  const items=RECIPES.filter(function(r){return r.cat===catId;});
+  if(!items.length)return;
+  document.getElementById('catModalTitle').textContent=(cat?cat.label:'📂 Kategori')+' ('+items.length+')';
+  const list=document.getElementById('catModalList');
+  list.innerHTML=items.map(function(r){
+    const idx=RECIPES.findIndex(function(x){return(x.id&&x.id===r.id)||x.name===r.name;});
     const score=getRecipeScore(r);
     const sColor=getScoreColor(score);
-    const catLabels={fit:'💪',klasik:'🍲',hizli:'⚡',vegan:'🌱',sebze:'🥬',corba:'🍲',tatli:'🍮'};
-    return `<div onclick="openRecipeDetail(${idx})" style="scroll-snap-align:start;cursor:pointer;display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:4px;background:var(--card2);border-radius:12px;border:1px solid var(--border);transition:all .15s;position:relative;overflow:hidden" onpointerdown="this.style.transform='scale(.98)'" onpointerup="this.style.transform=''" onpointerleave="this.style.transform=''">
+    return `<div onclick="closeRecipeCatModal();openRecipeDetail(${idx})" style="display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s" onpointerdown="this.style.background='var(--accent-glow)'" onpointerup="this.style.background=''" onpointerleave="this.style.background=''">
       ${r.img
-        ?`<div style="width:52px;height:52px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--glass);border:1px solid var(--border)"><img src="${r.img}" alt="${r.name}" style="width:100%;height:100%;object-fit:cover" loading="lazy" onerror="this.parentElement.innerHTML='<div style=\\'font-size:1.5rem;display:flex;align-items:center;justify-content:center;height:100%\\'>${r.emoji||'🍽️'}</div>'"></div>`
-        :`<div style="font-size:1.6rem;flex-shrink:0;width:52px;height:52px;display:flex;align-items:center;justify-content:center;background:var(--glass);border-radius:10px;border:1px solid var(--border)">${r.emoji||'🍽️'}</div>`
+        ?`<div style="width:56px;height:56px;border-radius:10px;overflow:hidden;flex-shrink:0;background:var(--glass)"><img src="${r.img}" style="width:100%;height:100%;object-fit:cover" loading="lazy"></div>`
+        :`<div style="width:56px;height:56px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--glass);flex-shrink:0">${r.emoji||'🍽️'}</div>`
       }
       <div style="flex:1;min-width:0">
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
           <span style="font-weight:700;font-size:.84rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</span>
-          <span style="font-size:.58rem;padding:1px 5px;border-radius:5px;background:${sColor}22;color:${sColor};font-weight:700;flex-shrink:0">${score}</span>
+          <span style="font-size:.56rem;padding:1px 5px;border-radius:5px;background:${sColor}22;color:${sColor};font-weight:700;flex-shrink:0">${score}</span>
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;font-size:.6rem;font-weight:600">
+        <div style="font-size:.68rem;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.desc||''}</div>
+        <div style="display:flex;gap:4px;font-size:.58rem;font-weight:600;margin-top:2px">
           ${r.prot?`<span style="color:#ff7a7a">P${r.prot}g</span>`:''}
           ${r.carb?`<span style="color:#22d3ee">K${r.carb}g</span>`:''}
           ${r.fat?`<span style="color:#ffcc55">Y${r.fat}g</span>`:''}
-          <span style="color:var(--text2)">⏱${r.time||'—'}dk</span>
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
         <div style="font-weight:800;color:var(--accent);font-size:.88rem">${r.cal||'—'}</div>
-        <div style="font-size:.58rem;color:var(--text2);font-weight:600">kcal</div>
+        <div style="font-size:.56rem;color:var(--text2)">kcal · ${r.time||'—'}dk</div>
       </div>
-      <div style="font-size:.8rem;color:var(--text2);flex-shrink:0;margin-left:2px">›</div>
     </div>`;
   }).join('');
+  document.getElementById('recipeCatModal').classList.add('show');
+}
+function closeRecipeCatModal(){document.getElementById('recipeCatModal').classList.remove('show')}
+
+// ═══ ARAMA MODAL ═══
+function openRecipeSearchModal(){
+  document.getElementById('recipeSearchModal').classList.add('show');
+  document.getElementById('recipeSearchInput').value='';
+  document.getElementById('recipeSearchResults').innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:.82rem">Tarif adı yazarak arayın</div>';
+  setTimeout(function(){document.getElementById('recipeSearchInput').focus()},300);
+}
+function closeRecipeSearchModal(){document.getElementById('recipeSearchModal').classList.remove('show')}
+
+function onRecipeSearch(){
+  const q=(document.getElementById('recipeSearchInput').value||'').toLowerCase().trim();
+  const container=document.getElementById('recipeSearchResults');
+  if(!q||q.length<2){
+    container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:.82rem">En az 2 karakter yazın</div>';
+    return;
+  }
+  const results=RECIPES.filter(function(r){
+    return r.name.toLowerCase().includes(q)||(r.desc||'').toLowerCase().includes(q)||(r.tags||[]).some(function(t){return t.includes(q)});
+  });
+  if(!results.length){
+    container.innerHTML='<div style="text-align:center;padding:30px;color:var(--text2);font-size:.82rem">Sonuç bulunamadı</div>';
+    return;
+  }
+  container.innerHTML='<div style="font-size:.72rem;color:var(--text2);margin-bottom:8px;font-weight:600">'+results.length+' sonuç</div>'
+    +results.map(function(r){
+      const idx=RECIPES.findIndex(function(x){return(x.id&&x.id===r.id)||x.name===r.name;});
+      const catLabels={fit:'💪',klasik:'🍲',hizli:'⚡',vegan:'🌱',sebze:'🥬',corba:'🍲',tatli:'🍮',hamur:'🍞'};
+      return `<div onclick="closeRecipeSearchModal();openRecipeDetail(${idx})" style="display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);cursor:pointer">
+        ${r.img
+          ?`<div style="width:44px;height:44px;border-radius:8px;overflow:hidden;flex-shrink:0"><img src="${r.img}" style="width:100%;height:100%;object-fit:cover" loading="lazy"></div>`
+          :`<div style="width:44px;height:44px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;background:var(--glass);flex-shrink:0">${r.emoji||'🍽️'}</div>`
+        }
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:.82rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.name}</div>
+          <div style="font-size:.62rem;color:var(--text2)">${catLabels[r.cat]||''} ${r.cal||'—'} kcal · ${r.time||'—'}dk</div>
+        </div>
+        <div style="font-size:.75rem;color:var(--text2)">›</div>
+      </div>`;
+    }).join('');
 }
 
 // ═══ CAROUSEL RENDER ═══
@@ -4628,7 +4724,6 @@ function renderRecipeCarousel(recipes){
   const dots=document.getElementById('carouselDots');
   if(!track||!dots)return;
 
-  // Fotoğraflı tarifleri seç (carousel sadece fotoğraflıları gösterir)
   const withImg=recipes.filter(r=>r.img);
   if(!withImg.length){
     track.innerHTML='';dots.innerHTML='';
@@ -4637,7 +4732,6 @@ function renderRecipeCarousel(recipes){
   }
   document.getElementById('recipeCarousel').style.display='block';
 
-  // Rastgele karıştır, max 8 kart
   const shuffled=[...withImg].sort(()=>Math.random()-.5).slice(0,8);
   const catLabels={fit:'💪 Fit',klasik:'🍲 Klasik',hizli:'⚡ Hızlı',vegan:'🌱 Vegan',sebze:'🥬 Sebze',corba:'🍲 Çorba',tatli:'🍮 Tatlı'};
 
@@ -4663,20 +4757,15 @@ function renderRecipeCarousel(recipes){
     </div>`;
   }).join('');
 
-  // Dots
   dots.innerHTML=shuffled.map((_,i)=>`<div class="c-dot${i===0?' active':''}" onclick="scrollCarouselTo(${i})"></div>`).join('');
 
-  // Scroll listener for dots
   track.onscroll=function(){
     const scrollLeft=track.scrollLeft;
     const cardWidth=track.querySelector('.rc-card')?.offsetWidth||300;
     const activeIdx=Math.round(scrollLeft/(cardWidth+8));
-    dots.querySelectorAll('.c-dot').forEach((d,i)=>{
-      d.classList.toggle('active',i===activeIdx);
-    });
+    dots.querySelectorAll('.c-dot').forEach((d,i)=>{d.classList.toggle('active',i===activeIdx)});
   };
 
-  // Auto-scroll
   clearInterval(_carouselInterval);
   let autoIdx=0;
   _carouselInterval=setInterval(()=>{
