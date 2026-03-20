@@ -1161,9 +1161,9 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 </div>
 
 <!-- Tarifi Öğüne Ekle Modal -->
-<div class="modal-overlay" id="addRecipeModal" onclick="if(event.target===this)closeAddRecipeModal()">
-  <div class="modal-content">
-    <div class="modal" style="padding:18px 18px 28px">
+<div class="modal-overlay" id="addRecipeModal" onclick="if(event.target===this)closeAddRecipeModal()" style="z-index:150">
+  <div class="modal-content" style="width:100%">
+    <div class="modal" style="padding:18px 18px 28px;max-width:100%;width:100%">
       <div class="modal-handle"></div>
       <h2 style="font-size:.92rem;margin-bottom:4px">✅ Tarifi Öğüne Ekle</h2>
       <div id="armRecipeName" style="font-size:.76rem;color:var(--text2);margin-bottom:14px"></div>
@@ -4457,12 +4457,10 @@ function openAddRecipeModal(){
   var r=RECIPES[_pendingRecipeIdx];if(!r)return;
   var modal=document.getElementById('addRecipeModal');
   if(!modal)return;
-  // Modal yoksa dinamik yarat
-  document.getElementById('armRecipeName').textContent=r.name+' ('+r.serv+' kişilik)';
-  // Servis sayısı inputunu sıfırla
+  document.getElementById('armRecipeName').innerHTML=r.name+' <span style="color:var(--accent);font-weight:700">('+r.cal+' kcal/porsiyon)</span>';
   var si=document.getElementById('armServings');
   if(si) si.value=1;
-  modal.style.cssText='';
+  modal.style.cssText='z-index:150';
   modal.classList.add('show');
 }
 
@@ -4478,12 +4476,13 @@ function confirmAddRecipeToMeal(){
   var data=getDayData();
   if(!data[mealId]) data[mealId]=[];
 
-  // Tarifi tek kalem olarak ekle (kalori/makro orantılı)
-  var scale=servings/(r.serv||1);
+  // Tarifi tek kalem olarak ekle
+  // Tariflerdeki kalori/makro değerleri 1 porsiyon içindir
+  var scale=servings;
   var cal=Math.round((r.cal||0)*scale);
-  var prot=Math.round((r.prot||Math.round((r.cal||0)*0.2/4))*scale);
-  var carb=Math.round((r.carb||Math.round((r.cal||0)*0.5/4))*scale);
-  var fat=Math.round((r.fat||Math.round((r.cal||0)*0.3/9))*scale);
+  var prot=Math.round((r.prot||0)*scale);
+  var carb=Math.round((r.carb||0)*scale);
+  var fat=Math.round((r.fat||0)*scale);
 
   data[mealId].push({
     name:r.name+(servings!==1?' ('+servings+'p)':''),
@@ -4966,24 +4965,10 @@ function buildStepsList(steps){
 function buildIngredientList(ing){
   if(!ing||!ing.length) return '<div style="color:var(--text2);font-size:.8rem">Malzeme bilgisi yok</div>';
   return '<div style="display:flex;flex-direction:column;gap:4px">'+ing.map(function(item){
-    // Malzeme string'inden yiyeceği FOOD_DB'de ara
     var ingText=typeof item==='string'?item:(item.name||'');
-    var matchedFood=null;
-    var lower=ingText.toLowerCase();
-    // Önce tam eşleşme, sonra kısmi
-    FOOD_DB.forEach(function(f){
-      if(!matchedFood&&(lower.includes(f.name.toLowerCase())||f.name.toLowerCase().includes(lower.split(' ')[0]))){
-        matchedFood=f;
-      }
-    });
-    var matchBadge=matchedFood?
-      '<span style="font-size:.6rem;padding:1px 5px;background:rgba(61,214,140,.12);color:var(--green);border-radius:5px;border:1px solid rgba(61,214,140,.2);margin-left:4px">DB ✓</span>':'';
-    var calHint=matchedFood?
-      '<span style="font-size:.62rem;color:var(--text2);margin-left:auto;flex-shrink:0">~'+matchedFood.cal+' kcal/100g</span>':'';
     return '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--glass);border-radius:8px;border:1px solid var(--border)">'
       +'<span style="color:var(--accent);font-size:.9rem;flex-shrink:0">•</span>'
-      +'<span style="font-size:.8rem;flex:1">'+ingText+matchBadge+'</span>'
-      +calHint
+      +'<span style="font-size:.8rem;flex:1">'+ingText+'</span>'
       +'</div>';
   }).join('')+'</div>';
 }
