@@ -780,6 +780,8 @@ async function fetchSpoonRecipes(){
   var count=parseInt(document.getElementById('spoonCount').value)||10;
   var cat=document.getElementById('spoonCat').value;
   var diet=document.getElementById('spoonDiet').value;
+  var cuisine=document.getElementById('spoonCuisine').value;
+  var query=document.getElementById('spoonQuery').value.trim();
 
   st.textContent='🔍 Spoonacular\'dan tarifler aranıyor...';
   preview.innerHTML='';
@@ -795,6 +797,8 @@ async function fetchSpoonRecipes(){
     +'&fillIngredients=true'
     +'&instructionsRequired=true';
   if(diet&&diet!=='any')url+='&diet='+diet;
+  if(cuisine&&cuisine!=='any')url+='&cuisine='+encodeURIComponent(cuisine);
+  if(query)url+='&query='+encodeURIComponent(query);
   // Rastgele sonuçlar için offset
   url+='&offset='+Math.floor(Math.random()*50);
 
@@ -975,9 +979,28 @@ async function saveSpoonRecipes(){
     <p>365.000+ tariften seç, otomatik Türkçeye çevir, Firebase'e kaydet</p>
     <div class="row" style="margin-bottom:6px">
       <div style="flex:1">
+        <label style="font-size:.75rem;color:#8a8d9b;display:block;margin-bottom:3px">Mutfak</label>
+        <select id="spoonCuisine">
+          <option value="turkish">🇹🇷 Türk</option>
+          <option value="middle eastern">🧆 Orta Doğu</option>
+          <option value="mediterranean">🫒 Akdeniz</option>
+          <option value="greek">🇬🇷 Yunan</option>
+          <option value="any">🌍 Tüm Mutfaklar</option>
+          <option value="italian">🇮🇹 İtalyan</option>
+          <option value="mexican">🇲🇽 Meksika</option>
+          <option value="indian">🇮🇳 Hint</option>
+          <option value="chinese">🇨🇳 Çin</option>
+          <option value="japanese">🇯🇵 Japon</option>
+          <option value="korean">🇰🇷 Kore</option>
+          <option value="thai">🇹🇭 Tayland</option>
+          <option value="french">🇫🇷 Fransız</option>
+          <option value="american">🇺🇸 Amerikan</option>
+        </select>
+      </div>
+      <div style="flex:1">
         <label style="font-size:.75rem;color:#8a8d9b;display:block;margin-bottom:3px">Kategori</label>
         <select id="spoonCat">
-          <option value="klasik">🍲 Klasik / Ana Yemek</option>
+          <option value="klasik">🍲 Ana Yemek</option>
           <option value="corba">🍲 Çorba</option>
           <option value="fit">🥗 Salata / Fit</option>
           <option value="tatli">🍮 Tatlı</option>
@@ -987,20 +1010,25 @@ async function saveSpoonRecipes(){
           <option value="hamur">🍞 Ekmek / Hamur</option>
         </select>
       </div>
+    </div>
+    <div class="row" style="margin-bottom:6px">
+      <div style="flex:2">
+        <label style="font-size:.75rem;color:#8a8d9b;display:block;margin-bottom:3px">Arama (İngilizce — opsiyonel)</label>
+        <input type="text" id="spoonQuery" placeholder="kebab, lentil soup, baklava...">
+      </div>
       <div style="flex:1">
-        <label style="font-size:.75rem;color:#8a8d9b;display:block;margin-bottom:3px">Diyet Filtre</label>
+        <label style="font-size:.75rem;color:#8a8d9b;display:block;margin-bottom:3px">Diyet</label>
         <select id="spoonDiet">
           <option value="any">Hepsi</option>
           <option value="vegetarian">Vejetaryen</option>
           <option value="vegan">Vegan</option>
           <option value="gluten free">Glutensiz</option>
           <option value="ketogenic">Keto</option>
-          <option value="paleo">Paleo</option>
         </select>
       </div>
       <div>
         <label style="font-size:.75rem;color:#8a8d9b;display:block;margin-bottom:3px">Adet</label>
-        <input type="number" id="spoonCount" value="5" min="1" max="20" style="width:60px;text-align:center">
+        <input type="number" id="spoonCount" value="5" min="1" max="20" style="width:55px;text-align:center">
       </div>
     </div>
     <button class="btn-u" onclick="fetchSpoonRecipes()" style="background:#f0a030">🥄 Tarifleri Çek & Çevir</button>
