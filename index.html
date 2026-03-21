@@ -910,10 +910,7 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
 <div class="page" id="page-oneri">
   <div class="content">
     <div class="profile-card" style="animation-delay:.06s;padding:14px 0 18px">
-      <div style="display:flex;justify-content:space-between;align-items:center;padding:0 18px;margin-bottom:10px">
-        <h3 style="margin:0">📖 Tarifler</h3>
-        <button onclick="openCatOrderModal()" style="background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-family:var(--font,system-ui);font-size:.68rem;font-weight:700;color:var(--text2);cursor:pointer">⇅ Sırala</button>
-      </div>
+      <h3 style="padding:0 18px;margin-bottom:10px">📖 Tarifler</h3>
 
       <!-- ═══ ARAMA ═══ -->
       <div style="padding:0 18px 10px">
@@ -971,20 +968,6 @@ body::before{content:'';position:fixed;top:-50%;left:-50%;width:200%;height:200%
       </div>
     </div>
 
-    <!-- ═══ KATEGORİ SIRALAMA MODAL ═══ -->
-    <div class="modal-overlay" id="catOrderModal" onclick="if(event.target===this)closeCatOrderModal()">
-      <div class="modal-content" style="width:100%">
-        <div class="modal" style="max-height:92vh;padding:16px 20px 28px">
-          <div class="modal-handle"></div>
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-            <h2 style="margin:0">⇅ Kategori Sıralaması</h2>
-            <button onclick="saveCatOrder();closeCatOrderModal()" style="background:var(--accent);color:#fff;border:none;border-radius:10px;padding:6px 14px;font-family:var(--font,system-ui);font-size:.75rem;font-weight:700;cursor:pointer">💾 Kaydet</button>
-          </div>
-          <p style="font-size:.72rem;color:var(--text2);margin-bottom:12px">Kategorileri yukarı/aşağı taşıyarak sıralayın. Görmek istemediğinizi gizleyin.</p>
-          <div id="catOrderList"></div>
-        </div>
-      </div>
-    </div>
     <div id="recipeSearchModal" style="position:fixed;top:0;left:0;right:0;bottom:0;background:var(--bg);z-index:120;display:none;flex-direction:column;max-width:430px;margin:0 auto">
       <div style="padding:max(14px,env(safe-area-inset-top)) 16px 10px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--card);backdrop-filter:blur(20px)">
         <div style="display:flex;align-items:center;gap:10px">
@@ -1704,6 +1687,41 @@ function getBuiltinFoodDB(){return[
 ,{name:"Maydanoz",emoji:"🌿",cal:36,prot:3,carb:6,fat:1,cat:"hammadde"}
 ,{name:"Nane",emoji:"🌿",cal:44,prot:3,carb:8,fat:1,cat:"hammadde"}
 ,{name:"Dereotu",emoji:"🌿",cal:43,prot:4,carb:7,fat:1,cat:"hammadde"}
+,{name:"Tahin",emoji:"🥜",cal:595,prot:17,carb:21,fat:54,cat:"hammadde"}
+,{name:"Nar Ekşisi",emoji:"🍎",cal:110,prot:0,carb:28,fat:0,cat:"hammadde"}
+,{name:"Biber Salçası",emoji:"🌶️",cal:80,prot:3,carb:14,fat:2,cat:"hammadde"}
+,{name:"Domates Salçası",emoji:"🍅",cal:82,prot:4,carb:18,fat:0,cat:"hammadde"}
+,{name:"Sumak",emoji:"🌿",cal:239,prot:5,carb:44,fat:8,cat:"hammadde"}
+,{name:"Kimyon",emoji:"🌿",cal:375,prot:18,carb:44,fat:22,cat:"hammadde"}
+,{name:"Pul Biber",emoji:"🌶️",cal:282,prot:12,carb:50,fat:6,cat:"hammadde"}
+,{name:"Kekik (kuru)",emoji:"🌿",cal:276,prot:9,carb:64,fat:7,cat:"hammadde"}
+,{name:"İsot (Urfa biberi)",emoji:"🌶️",cal:282,prot:12,carb:50,fat:6,cat:"hammadde"}
+,{name:"Karabiber",emoji:"🌿",cal:255,prot:10,carb:64,fat:3,cat:"hammadde"}
+,{name:"Tarçın",emoji:"🌿",cal:247,prot:4,carb:81,fat:1,cat:"hammadde"}
+,{name:"Defne Yaprağı",emoji:"🍃",cal:313,prot:8,carb:75,fat:8,cat:"hammadde"}
+,{name:"Pekmez (üzüm)",emoji:"🍇",cal:293,prot:1,carb:72,fat:0,cat:"hammadde"}
+,{name:"Sirke (üzüm)",emoji:"🫗",cal:18,prot:0,carb:1,fat:0,cat:"hammadde"}
+,{name:"Limon Suyu",emoji:"🍋",cal:22,prot:0,carb:7,fat:0,cat:"hammadde"}
+,{name:"Çam Fıstığı",emoji:"🌰",cal:673,prot:14,carb:13,fat:68,cat:"hammadde"}
+,{name:"Antep Fıstığı",emoji:"🥜",cal:562,prot:20,carb:28,fat:45,cat:"hammadde"}
+,{name:"Kuru Üzüm",emoji:"🍇",cal:299,prot:3,carb:79,fat:0,cat:"hammadde"}
+,{name:"Kuş Üzümü",emoji:"🍇",cal:283,prot:4,carb:67,fat:2,cat:"hammadde"}
+,{name:"Yufka",emoji:"🥟",cal:310,prot:9,carb:58,fat:5,cat:"hammadde"}
+,{name:"Baklava Yufkası",emoji:"🥟",cal:340,prot:8,carb:55,fat:10,cat:"hammadde"}
+,{name:"Gül Suyu",emoji:"🌹",cal:0,prot:0,carb:0,fat:0,cat:"hammadde"}
+,{name:"Maya (kuru)",emoji:"🧬",cal:325,prot:40,carb:41,fat:7,cat:"hammadde"}
+,{name:"Kabartma Tozu",emoji:"🧪",cal:53,prot:0,carb:28,fat:0,cat:"hammadde"}
+,{name:"Tuz",emoji:"🧂",cal:0,prot:0,carb:0,fat:0,cat:"hammadde"}
+,{name:"Sıvıyağ",emoji:"🫗",cal:884,prot:0,carb:0,fat:100,cat:"hammadde"}
+,{name:"Susam",emoji:"🌿",cal:573,prot:18,carb:23,fat:50,cat:"hammadde"}
+,{name:"Çörek Otu",emoji:"🌿",cal:345,prot:16,carb:52,fat:15,cat:"hammadde"}
+,{name:"Kırmızı Toz Biber",emoji:"🌶️",cal:282,prot:12,carb:50,fat:6,cat:"hammadde"}
+,{name:"Mahlep",emoji:"🌿",cal:400,prot:6,carb:30,fat:30,cat:"hammadde"}
+,{name:"Beyaz Peynir",emoji:"🧀",cal:264,prot:17,carb:1,fat:21,cat:"hammadde"}
+,{name:"Kaşar Peyniri",emoji:"🧀",cal:350,prot:25,carb:2,fat:27,cat:"hammadde"}
+,{name:"Lor Peyniri",emoji:"🧀",cal:160,prot:11,carb:3,fat:12,cat:"hammadde"}
+,{name:"Süzme Yoğurt",emoji:"🥛",cal:66,prot:10,carb:4,fat:0,cat:"hammadde"}
+,{name:"Tulum Peyniri",emoji:"🧀",cal:315,prot:22,carb:1,fat:25,cat:"hammadde"}
 ,{name:"Taze Soğan",emoji:"🧅",cal:32,prot:2,carb:7,fat:0,cat:"sebze"}
 ,{name:"Mantar (kültür)",emoji:"🍄",cal:22,prot:3,carb:3,fat:0,cat:"sebze"}
 ,{name:"Bezelye (taze)",emoji:"🟢",cal:81,prot:5,carb:14,fat:0,cat:"sebze"}
