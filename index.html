@@ -4706,25 +4706,31 @@ async function filterRecipes(cat){
   if(!_recipesLoaded || !RECIPES.length){
     await loadRecipesFromFirebase();
   }
+  // Kategori sıralamasını Firestore'dan yükle (ilk seferde)
+  if(!_cachedCatOrder) await loadCatOrderFromFirebase();
   // Öne çıkan carousel
   renderRecipeCarousel(RECIPES);
   // Kategori satırları
   renderCategoryRows();
 }
 
-// ═══ KATEGORİ SIRALAMA ═══
-function getSavedCatOrder(){
+// ═══ KATEGORİ SIRALAMA (Firestore'dan okur) ═══
+var _cachedCatOrder=null;
+
+async function loadCatOrderFromFirebase(){
   try{
-    var saved=JSON.parse(localStorage.getItem('fs_cat_order')||'null');
-    if(saved&&saved.length)return saved;
-  }catch(e){}
+    var doc=await db.collection('settings').doc('cat_order').get();
+    if(doc.exists&&doc.data().order){
+      _cachedCatOrder=doc.data().order;
+      return _cachedCatOrder;
+    }
+  }catch(e){console.warn('Cat order yüklenemedi:',e);}
   return null;
 }
 
 function getOrderedCats(){
-  var saved=getSavedCatOrder();
-  if(!saved)return RECIPE_CATS.map(function(c){return{id:c.id,visible:true};});
-  // Merge: saved order + any new cats not in saved
+  var saved=_cachedCatOrder;
+  if(!saved||!saved.length)return RECIPE_CATS.map(function(c){return{id:c.id,visible:true};});
   var ordered=[];
   saved.forEach(function(s){
     var cat=RECIPE_CATS.find(function(c){return c.id===s.id;});
@@ -4734,55 +4740,6 @@ function getOrderedCats(){
     if(!ordered.find(function(o){return o.id===c.id;}))ordered.push({id:c.id,visible:true});
   });
   return ordered;
-}
-
-function openCatOrderModal(){
-  var order=getOrderedCats();
-  var list=document.getElementById('catOrderList');
-  list.innerHTML=order.map(function(o,i){
-    var cat=RECIPE_CATS.find(function(c){return c.id===o.id;});
-    if(!cat)return'';
-    var items=getRecipesForCat(cat);
-    return '<div data-catid="'+o.id+'" style="display:flex;align-items:center;gap:8px;padding:10px;margin-bottom:6px;background:var(--glass);border:1.5px solid var(--border);border-radius:10px'+(o.visible?'':';opacity:.4')+'">'
-      +'<div style="display:flex;flex-direction:column;gap:2px;flex-shrink:0">'
-        +'<button onclick="moveCatOrder('+i+',-1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:.75rem;padding:0;line-height:1">▲</button>'
-        +'<button onclick="moveCatOrder('+i+',1)" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:.75rem;padding:0;line-height:1">▼</button>'
-      +'</div>'
-      +'<div style="flex:1;min-width:0">'
-        +'<div style="font-weight:700;font-size:.84rem">'+cat.label+'</div>'
-        +'<div style="font-size:.62rem;color:var(--text2)">'+items.length+' tarif</div>'
-      +'</div>'
-      +'<button onclick="toggleCatVisibility(\''+o.id+'\')" style="background:'+(o.visible?'var(--green)':'var(--red)')+';color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:.68rem;font-weight:700;cursor:pointer;flex-shrink:0">'+(o.visible?'👁 Görünür':'🚫 Gizli')+'</button>'
-    +'</div>';
-  }).join('');
-  document.getElementById('catOrderModal').classList.add('show');
-}
-
-function closeCatOrderModal(){document.getElementById('catOrderModal').classList.remove('show')}
-
-function moveCatOrder(fromIdx,direction){
-  var order=getOrderedCats();
-  var toIdx=fromIdx+direction;
-  if(toIdx<0||toIdx>=order.length)return;
-  var temp=order[fromIdx];
-  order[fromIdx]=order[toIdx];
-  order[toIdx]=temp;
-  localStorage.setItem('fs_cat_order',JSON.stringify(order));
-  openCatOrderModal(); // refresh
-}
-
-function toggleCatVisibility(catId){
-  var order=getOrderedCats();
-  var item=order.find(function(o){return o.id===catId;});
-  if(item)item.visible=!item.visible;
-  localStorage.setItem('fs_cat_order',JSON.stringify(order));
-  openCatOrderModal(); // refresh
-}
-
-function saveCatOrder(){
-  // Zaten her değişiklikte kaydediliyor, burada sadece listeyi yenile
-  renderCategoryRows();
-  showToast('✅ Kategori sıralaması kaydedildi');
 }
 
 function renderCategoryRows(){
@@ -7517,7 +7474,6 @@ function addManualExercise(){
     if(id==='insightModal')return ()=>closeInsightModal&&closeInsightModal();
     if(id==='goalsModal')return ()=>closeGoalsModal&&closeGoalsModal();
     if(id==='prepModal')return ()=>closePrepModal&&closePrepModal();
-    if(id==='catOrderModal')return ()=>closeCatOrderModal&&closeCatOrderModal();
     if(id==='exerciseModal')return ()=>closeExerciseModal&&closeExerciseModal();
     return ()=>overlay.classList.remove('show');
   }
