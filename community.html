@@ -89,8 +89,20 @@
     <div id="comDataPreview"></div>
     <div class="com-compose-acts">
       <button onclick="document.getElementById('comPhotoInput').click()" style="background:var(--glass);color:var(--text2);border:1px solid var(--border)">📷 Fotoğraf</button>
-      <button onclick="comAttach()" style="background:var(--glass);color:var(--text2);border:1px solid var(--border)">📊 Veri Ekle</button>
+      <button onclick="comAttachMeal()" style="background:var(--glass);color:var(--text2);border:1px solid var(--border)">🍽️ Öğün Ekle</button>
       <button onclick="comPost()" style="background:var(--accent);color:#fff;margin-left:auto">Paylaş</button>
+    </div>
+  </div>
+
+  <!-- Öğün seçici modal -->
+  <div id="comMealPickerModal" style="display:none;position:fixed;inset:0;z-index:9990;background:rgba(0,0,0,.65);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);align-items:center;justify-content:center;padding:16px">
+    <div style="background:var(--card);border:1.5px solid var(--border);border-radius:16px;max-width:420px;width:100%;padding:18px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0;font-size:1rem">🍽️ Hangi öğünü paylaşmak istersin?</h3>
+        <button onclick="comCloseMealPicker()" style="background:var(--glass);border:1px solid var(--border);border-radius:8px;padding:5px 11px;font-family:var(--font,system-ui);font-size:.78rem;font-weight:700;color:var(--text2);cursor:pointer">Kapat</button>
+      </div>
+      <p style="color:var(--text2);font-size:.74rem;margin:0 0 12px;line-height:1.5">Sadece seçtiğin öğünün kalori ve makroları paylaşılır — günlük toplamın özel kalır.</p>
+      <div id="comMealPickerList" style="display:flex;flex-direction:column;gap:8px"></div>
     </div>
   </div>
   <!-- Feed -->
@@ -168,13 +180,194 @@ function comPreviewPhoto(input){
 
 function comRemovePhoto(){_comPhoto=null;_comPhotoFile=null;document.getElementById('comImgPreview').innerHTML='';document.getElementById('comPhotoInput').value=''}
 
-function comAttach(){
-  try{var t=typeof getTotals==='function'?getTotals():{cal:0,prot:0,carb:0,fat:0};
-    var tgt=typeof dailyTarget!=='undefined'?dailyTarget:2000;var w=typeof getWaterMl==='function'?getWaterMl():0;
-    _comData={cal:Math.round(t.cal),prot:Math.round(t.prot),carb:Math.round(t.carb),fat:Math.round(t.fat),target:tgt,water:w};
-    var p=tgt?Math.round(t.cal/tgt*100):0;
-    document.getElementById('comDataPreview').innerHTML='<div style="background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:8px 12px;font-size:.72rem;margin-top:6px"><span style="color:var(--accent);font-weight:700">🔥 '+_comData.cal+'/'+tgt+' kcal ('+p+'%)</span> · P:'+_comData.prot+'g K:'+_comData.carb+'g Y:'+_comData.fat+'g · 💧'+(w/1000).toFixed(1)+'L <button onclick="_comData=null;document.getElementById(\'comDataPreview\').innerHTML=\'\'" style="background:none;border:none;color:var(--text2);cursor:pointer;float:right">✕</button></div>'}
-  catch(e){if(typeof showToast==='function')showToast('⚠️ Veri alınamadı')}}
+// Eski API — geriye uyumluluk için, yeni öğün seçici aç
+function comAttach(){ return comAttachMeal(); }
+
+function comAttachMeal(){
+  var modal=document.getElementById('comMealPickerModal');
+  var list=document.getElementById('comMealPickerList');
+  if(!modal||!list)return;
+
+  // Bugünün öğünlerini al
+  var day=null;
+  try{ if(typeof getDayData==='function') day=getDayData(); }catch(e){}
+  if(!day) day={kahvalti:[],ogle:[],aksam:[],atistirmalik:[]};
+
+  var meals=[
+    {id:'kahvalti', icon:'🌅', label:'Kahvaltı'},
+    {id:'ogle',     icon:'☀️', label:'Öğle'},
+    {id:'aksam',    icon:'🌙', label:'Akşam'},
+    {id:'atistirmalik', icon:'🍿', label:'Atıştırmalık'}
+  ];
+
+  var html='';
+  meals.forEach(function(m){
+    var foods=day[m.id]||[];
+    var hasItems=foods.length>0;
+    var sum={cal:0,prot:0,carb:0,fat:0};
+    foods.forEach(function(f){
+      sum.cal+=f.cal||0; sum.prot+=f.prot||0; sum.carb+=f.carb||0; sum.fat+=f.fat||0;
+    });
+    sum.cal=Math.round(sum.cal); sum.prot=Math.round(sum.prot);
+    sum.carb=Math.round(sum.carb); sum.fat=Math.round(sum.fat);
+
+    var items=foods.slice(0,3).map(function(f){return f.name;}).join(', ');
+    if(foods.length>3) items+=' +'+(foods.length-3);
+
+    var disabled=!hasItems;
+    var bg=disabled?'opacity:.4;cursor:not-allowed':'cursor:pointer';
+    var click=disabled?'':"onclick=\"comPickMeal('"+m.id+"','"+m.icon+"','"+m.label+"')\"";
+    html+='<div '+click+' style="background:var(--glass);border:1.5px solid var(--border);border-radius:11px;padding:11px 13px;'+bg+';transition:all .15s">'+
+      '<div style="display:flex;align-items:center;gap:10px;margin-bottom:'+(hasItems?'4px':'0')+'">'+
+        '<span style="font-size:1.3rem">'+m.icon+'</span>'+
+        '<div style="flex:1"><div style="font-size:.88rem;font-weight:800">'+m.label+'</div>'+
+        (hasItems?'<div style="font-size:.66rem;color:var(--text2);margin-top:1px">'+esc(items)+'</div>':'<div style="font-size:.66rem;color:var(--text2);margin-top:1px">— Henüz yemek yok</div>')+
+        '</div>'+
+        (hasItems?'<div style="text-align:right"><div style="font-size:.95rem;font-weight:800;color:var(--accent)">'+sum.cal+' kcal</div></div>':'')+
+      '</div>'+
+      (hasItems?'<div style="display:flex;gap:5px;font-size:.62rem;font-weight:700"><span style="padding:2px 7px;border-radius:5px;background:rgba(255,122,122,.1);color:#ff7a7a">P '+sum.prot+'g</span><span style="padding:2px 7px;border-radius:5px;background:rgba(34,211,238,.1);color:#22d3ee">K '+sum.carb+'g</span><span style="padding:2px 7px;border-radius:5px;background:rgba(255,204,85,.1);color:#ffcc55">Y '+sum.fat+'g</span></div>':'')+
+    '</div>';
+  });
+
+  list.innerHTML=html;
+  modal.style.display='flex';
+}
+
+function comCloseMealPicker(){
+  var m=document.getElementById('comMealPickerModal');
+  if(m) m.style.display='none';
+}
+
+function comPickMeal(mealId, icon, label){
+  var day=null;
+  try{ if(typeof getDayData==='function') day=getDayData(); }catch(e){}
+  if(!day) return;
+  var foods=(day[mealId]||[]).slice();
+  if(!foods.length){ if(typeof showToast==='function') showToast('⚠️ Bu öğünde yemek yok'); return; }
+
+  var sum={cal:0,prot:0,carb:0,fat:0};
+  // Sadece görünür alanları taşı (gereksiz alanlar Firestore'a gitmesin)
+  var simpleFoods=foods.map(function(f){
+    sum.cal+=f.cal||0; sum.prot+=f.prot||0; sum.carb+=f.carb||0; sum.fat+=f.fat||0;
+    return {
+      name:f.name||'',
+      emoji:f.emoji||'🍽️',
+      cal:Math.round(f.cal||0),
+      prot:Math.round((f.prot||0)*10)/10,
+      carb:Math.round((f.carb||0)*10)/10,
+      fat:Math.round((f.fat||0)*10)/10,
+      portionUsed:Math.round(f.portionUsed||100)
+    };
+  });
+
+  _comData={
+    meal:mealId,
+    mealIcon:icon,
+    mealLabel:label,
+    cal:Math.round(sum.cal),
+    prot:Math.round(sum.prot),
+    carb:Math.round(sum.carb),
+    fat:Math.round(sum.fat),
+    foods:simpleFoods,
+    foodCount:simpleFoods.length
+  };
+
+  var preview=document.getElementById('comDataPreview');
+  if(preview){
+    preview.innerHTML='<div style="background:var(--bg);border:1px solid var(--accent);border-radius:10px;padding:9px 12px;font-size:.74rem;margin-top:6px;display:flex;align-items:center;gap:8px">'+
+      '<span style="font-size:1.1rem">'+icon+'</span>'+
+      '<div style="flex:1"><div style="font-weight:800;font-size:.78rem">'+label+' ('+simpleFoods.length+' yemek)</div>'+
+      '<div style="font-size:.7rem;color:var(--text2);margin-top:1px"><span style="color:var(--accent);font-weight:700">🔥'+_comData.cal+' kcal</span> · P:'+_comData.prot+'g K:'+_comData.carb+'g Y:'+_comData.fat+'g</div></div>'+
+      '<button onclick="_comData=null;document.getElementById(\'comDataPreview\').innerHTML=\'\'" style="background:none;border:none;color:var(--text2);cursor:pointer;font-size:1rem">✕</button>'+
+    '</div>';
+  }
+  comCloseMealPicker();
+}
+window.comAttachMeal=comAttachMeal;
+window.comCloseMealPicker=comCloseMealPicker;
+window.comPickMeal=comPickMeal;
+
+// Topluluk paylaşımındaki öğünü kendi öğün şablonlarına kaydet
+function comSaveAsTemplate(postId){
+  if(typeof getMealTemplates!=='function' || typeof setMealTemplates!=='function'){
+    if(typeof showToast==='function') showToast('⚠️ Şablon sistemi yüklenmedi');
+    return;
+  }
+  // Post'u bellekten DOM üzerinden bul (feed render'ında p saklanmıyor — Firestore'dan tekrar çek)
+  if(typeof db==='undefined'){
+    if(typeof showToast==='function') showToast('⚠️ Bağlantı yok');
+    return;
+  }
+  var btn=document.querySelector('[data-save-btn="'+postId+'"]');
+  if(btn){ btn.disabled=true; btn.style.opacity='.6'; }
+
+  db.collection('community_posts').doc(postId).get().then(function(snap){
+    if(!snap.exists){ if(typeof showToast==='function') showToast('⚠️ Paylaşım bulunamadı'); if(btn){btn.disabled=false;btn.style.opacity='1';} return; }
+    var p=snap.data();
+    var d=p.data;
+    if(!d || !d.meal || !Array.isArray(d.foods) || !d.foods.length){
+      if(typeof showToast==='function') showToast('⚠️ Bu paylaşımda öğün verisi yok');
+      if(btn){btn.disabled=false;btn.style.opacity='1';}
+      return;
+    }
+
+    var sharerName=(p.displayName||'Kullanıcı').trim();
+    var mealLabel=d.mealLabel||'Öğün';
+    // Türkçe ekle: "Ahmet'in Kahvaltısı"
+    var apostrophe=/[aeıiouöü]$/i.test(sharerName)?'\'in':'\'nin';
+    var tplName=sharerName+apostrophe+' '+mealLabel+'ı';
+    if(/[ke]ı$/i.test(mealLabel)) tplName=sharerName+apostrophe+' '+mealLabel; // basit fallback
+
+    // İsmi 60 karakterle sınırla
+    if(tplName.length>60) tplName=tplName.substring(0,57)+'...';
+
+    var foods=d.foods.map(function(f){
+      return {
+        name:f.name||'',
+        emoji:f.emoji||'🍽️',
+        cal:f.cal||0,
+        prot:f.prot||0,
+        carb:f.carb||0,
+        fat:f.fat||0,
+        portionUsed:f.portionUsed||100
+      };
+    });
+
+    var tpls=getMealTemplates();
+    // Aynı kaynaktan zaten kaydedilmiş mi? (sourcePostId)
+    var existing=tpls.find(function(t){return t.sourcePostId===postId;});
+    if(existing){
+      if(typeof showToast==='function') showToast('ℹ️ Bu öğün zaten şablonlarına kaydedilmiş');
+      if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='✓ <span style="font-size:.72rem;font-weight:700">Kayıtlı</span>';}
+      return;
+    }
+
+    tpls.unshift({
+      id:Date.now(),
+      mealId:d.meal,
+      name:tplName,
+      foods:foods,
+      totals:{cal:d.cal||0, prot:d.prot||0, carb:d.carb||0, fat:d.fat||0},
+      sourcePostId:postId,
+      sourceUid:p.uid||'',
+      sourceName:sharerName,
+      createdAt:Date.now()
+    });
+    setMealTemplates(tpls);
+
+    if(typeof showToast==='function') showToast('🔖 "'+tplName+'" şablonlarına kaydedildi!');
+    if(btn){
+      btn.disabled=false;
+      btn.style.opacity='1';
+      btn.innerHTML='✓ <span style="font-size:.72rem;font-weight:700">Kayıtlı</span>';
+      btn.style.color='var(--green)';
+    }
+  }).catch(function(e){
+    if(typeof showToast==='function') showToast('❌ '+(e.message||'Hata'));
+    if(btn){btn.disabled=false;btn.style.opacity='1';}
+  });
+}
+window.comSaveAsTemplate=comSaveAsTemplate;
 
 // ═══ PAYLAŞ ═══
 async function comPost(){
@@ -252,16 +445,42 @@ function comRenderPost(id,p){
   // Body
   html+='<div class="com-card-body">';
   if(p.text)html+='<div class="com-card-text">'+esc(p.text)+'</div>';
-  if(p.data){var d=p.data,pc=d.target?Math.round(d.cal/d.target*100):0;
-    html+='<div class="com-macros"><span style="color:var(--accent)">🔥'+d.cal+' kcal ('+pc+'%)</span><span style="color:#ff7a7a">P:'+d.prot+'g</span><span style="color:#22d3ee">K:'+d.carb+'g</span><span style="color:#ffcc55">Y:'+d.fat+'g</span>';
-    if(d.water)html+='<span>💧'+(d.water/1000).toFixed(1)+'L</span>';
-    html+='</div>';
-    html+='<div style="height:3px;background:var(--glass);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+Math.min(pc,100)+'%;background:var(--accent);border-radius:2px"></div></div>'}
+  if(p.data){
+    var d=p.data;
+    if(d.meal && d.foods){
+      // Yeni format: öğün paylaşımı
+      var icon=d.mealIcon||'🍽️';
+      var lbl=d.mealLabel||'Öğün';
+      html+='<div style="background:var(--glass);border:1px solid var(--border);border-radius:10px;padding:9px 12px;margin-top:6px">';
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:1.1rem">'+esc(icon)+'</span><span style="font-size:.78rem;font-weight:800">'+esc(lbl)+'</span><span style="font-size:.66rem;color:var(--text2);margin-left:auto">'+(d.foodCount||(d.foods||[]).length)+' yemek</span></div>';
+      // Yemek listesi (max 5 + kalan sayısı)
+      var fs=(d.foods||[]).slice(0,5);
+      html+='<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px">';
+      fs.forEach(function(f){
+        html+='<div style="display:flex;justify-content:space-between;font-size:.7rem;color:var(--text2)"><span>'+esc(f.emoji||'🍽️')+' '+esc(f.name||'')+(f.portionUsed?' <span style="opacity:.6">('+f.portionUsed+'g)</span>':'')+'</span><span style="color:var(--text);font-weight:700">'+(f.cal||0)+' kcal</span></div>';
+      });
+      if((d.foods||[]).length>5) html+='<div style="font-size:.66rem;color:var(--text2);text-align:center;font-style:italic">+'+((d.foods||[]).length-5)+' yemek daha</div>';
+      html+='</div>';
+      html+='<div class="com-macros" style="border-top:1px dashed var(--border);padding-top:7px"><span style="color:var(--accent);font-weight:800">🔥'+d.cal+' kcal</span><span style="color:#ff7a7a">P:'+d.prot+'g</span><span style="color:#22d3ee">K:'+d.carb+'g</span><span style="color:#ffcc55">Y:'+d.fat+'g</span></div>';
+      html+='</div>';
+    } else if(typeof d.cal !== 'undefined'){
+      // Eski format (geriye uyumluluk): günlük toplam
+      var pc=d.target?Math.round(d.cal/d.target*100):0;
+      html+='<div class="com-macros"><span style="color:var(--accent)">🔥'+d.cal+(d.target?'/'+d.target:'')+' kcal'+(d.target?' ('+pc+'%)':'')+'</span><span style="color:#ff7a7a">P:'+d.prot+'g</span><span style="color:#22d3ee">K:'+d.carb+'g</span><span style="color:#ffcc55">Y:'+d.fat+'g</span>';
+      if(d.water)html+='<span>💧'+(d.water/1000).toFixed(1)+'L</span>';
+      html+='</div>';
+      if(d.target) html+='<div style="height:3px;background:var(--glass);border-radius:2px;overflow:hidden"><div style="height:100%;width:'+Math.min(pc,100)+'%;background:var(--accent);border-radius:2px"></div></div>';
+    }
+  }
   html+='</div>';
   // Footer
   html+='<div class="com-card-foot">';
   html+='<button class="com-act'+(liked?' liked':'')+'" data-like-btn="'+esc(id)+'" onclick="comLike(\''+esc(id)+'\')">'+(liked?'❤️':'🤍')+' <span style="font-size:.72rem;font-weight:700">'+(p.likeCount||0)+'</span></button>';
   html+='<button class="com-act" data-comment-toggle="'+esc(id)+'" onclick="comToggleComments(\''+esc(id)+'\')">💬 <span style="font-size:.72rem;font-weight:700">'+(p.comments||[]).length+'</span></button>';
+  // Kaydet butonu (sadece başkasının postu için + öğün verisi varsa)
+  if(!isMe && p.data && p.data.meal && p.data.foods){
+    html+='<button class="com-act" data-save-btn="'+esc(id)+'" onclick="comSaveAsTemplate(\''+esc(id)+'\')" title="Öğün şablonu olarak kaydet">🔖 <span style="font-size:.72rem;font-weight:700">Kaydet</span></button>';
+  }
   if(isMe)html+='<button class="com-act" style="margin-left:auto" onclick="comDel(\''+esc(id)+'\')">🗑️</button>';
   html+='</div>';
   // Yorumlar (gizli)
