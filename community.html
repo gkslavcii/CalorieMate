@@ -187,6 +187,8 @@ function comAttachMeal(){
   var modal=document.getElementById('comMealPickerModal');
   var list=document.getElementById('comMealPickerList');
   if(!modal||!list)return;
+  // Modal'ı body'ye taşı — transform/filter'lı ata elementleri devre dışı bırak
+  if(modal.parentNode!==document.body){ document.body.appendChild(modal); }
 
   // Bugünün öğünlerini al
   var day=null;
@@ -477,8 +479,9 @@ function comRenderPost(id,p){
   html+='<div class="com-card-foot">';
   html+='<button class="com-act'+(liked?' liked':'')+'" data-like-btn="'+esc(id)+'" onclick="comLike(\''+esc(id)+'\')">'+(liked?'❤️':'🤍')+' <span style="font-size:.72rem;font-weight:700">'+(p.likeCount||0)+'</span></button>';
   html+='<button class="com-act" data-comment-toggle="'+esc(id)+'" onclick="comToggleComments(\''+esc(id)+'\')">💬 <span style="font-size:.72rem;font-weight:700">'+(p.comments||[]).length+'</span></button>';
-  // Kaydet butonu (sadece başkasının postu için + öğün verisi varsa)
-  if(!isMe && p.data && p.data.meal && p.data.foods){
+  // Kaydet butonu — öğün verisi varsa hem başkalarının hem kendi paylaşımlarında göster
+  // (Kendi öğününü başka güne tekrar uygulamak isteyebilirsin)
+  if(p.data && p.data.meal && p.data.foods){
     html+='<button class="com-act" data-save-btn="'+esc(id)+'" onclick="comSaveAsTemplate(\''+esc(id)+'\')" title="Öğün şablonu olarak kaydet">🔖 <span style="font-size:.72rem;font-weight:700">Kaydet</span></button>';
   }
   if(isMe)html+='<button class="com-act" style="margin-left:auto" onclick="comDel(\''+esc(id)+'\')">🗑️</button>';
@@ -564,7 +567,9 @@ async function comDel(id){if(!confirm('Gönderi silinsin mi?'))return;
 
 // ═══ MENÜ — ŞİKAYET & ENGELLE ═══
 function comMenu(postId,userId,isMe){
+  // Overlay'i body'ye taşı — transform/filter'lı ata elementleri devre dışı bırak
   var ov=document.getElementById('comMenuOverlay');
+  if(ov && ov.parentNode!==document.body){ document.body.appendChild(ov); }
   var html='<div class="com-menu-overlay" onclick="comCloseMenu()"></div><div class="com-menu">';
   if(!isMe){
     html+='<button onclick="comReport(\''+esc(postId)+'\')">🚩 Şikayet Et</button>';
