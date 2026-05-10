@@ -85,8 +85,8 @@ input:focus{border-color:#ff6b3d}
 </div>
 <div class="section active" id="sec-status">
   <div class="card"><h2>☁️ DB Durumu</h2><div id="dbStatus"><p>Kontrol ediliyor...</p></div><button class="btn-o" onclick="checkDB()">🔄 Yenile</button></div>
-  <div class="card"><h2>📤 Toplu Yükleme</h2><p>1094 yemegi Firebase'e yükler (tek seferlik)</p><button class="btn-u" onclick="uploadAll()">☁️ Yükle</button></div>
-  <div class="card"><h2>🗑️ Tehlikeli</h2>
+  <div class="card"><h2>📤 Toplu Yükleme</h2><p>Firebase'e Aktar</p><button class="btn-u" onclick="uploadAll()">☁️ Yükle</button></div>
+  <div class="card"><h2>🗑️ Veri Tabanı Yönetimi</h2>
     <button class="btn-r" onclick="clearDB()">Tüm DB Sil</button>
     <button class="btn-o" onclick="showDeletedFoods()" style="margin-top:4px">📋 Silinmiş Listesi Göster</button>
     <button class="btn-o" onclick="clearDeletedList()" style="margin-top:4px">🔄 Silinmiş Listeyi Temizle</button>
@@ -127,11 +127,11 @@ input:focus{border-color:#ff6b3d}
 
   <!-- AI YEMek Üretici -->
   <div class="card" style="border-left:3px solid #a07cf8">
-    <h2>🤖 AI Yemek Üretici</h2>
-    <p>Claude API ile yeni yemek/hammadde verisi üret ve DB'ye kaydet. Mevcut DB'deki kayıtlar otomatik atlanır.</p>
+    <h2> AI Yemek Üretici (çalışmıyor amkeyim)</h2>
+    <p>Claude API yemek/hammadde verisi .</p>
 
     <div style="margin-bottom:8px">
-      <div style="font-size:.72rem;color:#3dd68c;font-weight:700">🔒 API anahtarı Firestore'da güvenli şekilde saklanır (Ayarlar sekmesinden yönetin)</div>
+      <div style="font-size:.72rem;color:#3dd68c;font-weight:700">API key Firestore db</div>
     </div>
 
     <div class="row" style="margin-bottom:6px">
@@ -2336,7 +2336,7 @@ setTimeout(renderAdminCatOrder,500);
   <!-- ═══ PANEL: API Çek ═══ -->
   <div id="rPanelApi" style="display:none">
     <div class="card">
-    <h2>🥄 Spoonacular'dan Tarif Çek</h2>
+    <h2>🥄 Spoonacular Veri Tabanı</h2>
     <p>365.000+ tariften seç, otomatik Türkçeye çevir, Firebase'e kaydet</p>
     <div class="row" style="margin-bottom:6px">
       <div style="flex:1">
@@ -2574,7 +2574,7 @@ setTimeout(renderAdminCatOrder,500);
   <!-- Cloud Function Kodu -->
   <div class="card">
     <h2>⚙️ Cloud Function Kodu</h2>
-    <p>Firebase Cloud Functions'a deploy etmen gereken kod:</p>
+    <p>Firebase Cloud Function</p>
     <pre id="cloudFnCode" style="background:#0d0f14;border:1px solid #2a2d38;border-radius:8px;padding:12px;font-size:.65rem;color:#3dd68c;overflow-x:auto;line-height:1.5;white-space:pre-wrap;max-height:300px;overflow-y:auto"></pre>
     <button class="btn-o btn-sm" onclick="copyCloudFnCode()" style="margin-top:6px">📋 Kopyala</button>
   </div>
@@ -2830,185 +2830,6 @@ firebase deploy --only functions</pre>
 
 <script>
 // ── FCM Push Bildirimi fonksiyonları ─────────────────────────────────────────
-
-const CLOUD_FN_CODE = `// Firebase Cloud Functions — functions/index.js
-// Deploy: firebase deploy --only functions
-// Gerekli paketler: npm install firebase-functions firebase-admin node-fetch@2
-
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-admin.initializeApp();
-
-// ═══════ FATSECRET API PROXY ═══════
-// Tarayıcıdan doğrudan FatSecret API'ye erişilemez (CORS).
-// Bu function proxy görevi görür: credentials Firestore'da saklanır,
-// token sunucu tarafında alınır, arama yapılır, sonuçlar parse edilip döner.
-
-let _fsToken = null;
-let _fsTokenExpiry = 0;
-
-async function getFatSecretToken() {
-  if (_fsToken && Date.now() < _fsTokenExpiry - 60000) return _fsToken;
-  
-  const doc = await admin.firestore().collection('config').doc('fatsecret').get();
-  if (!doc.exists) throw new Error('FatSecret credentials bulunamadı');
-  const { clientId, clientSecret } = doc.data();
-  if (!clientId || !clientSecret) throw new Error('Client ID/Secret eksik');
-
-  const fetch = require('node-fetch');
-  const resp = await fetch('https://oauth.fatsecret.com/connect/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: 'grant_type=client_credentials&scope=basic'
-      + '&client_id=' + encodeURIComponent(clientId)
-      + '&client_secret=' + encodeURIComponent(clientSecret)
-  });
-  if (!resp.ok) throw new Error('Token hatası: ' + resp.status);
-  const data = await resp.json();
-  _fsToken = data.access_token;
-  _fsTokenExpiry = Date.now() + (data.expires_in || 86400) * 1000;
-  return _fsToken;
-}
-
-exports.fatSecretSearch = functions.https.onCall(async (data, context) => {
-  const query = data.query;
-  if (!query || query.length < 2) return { foods: [] };
-
-  try {
-    const token = await getFatSecretToken();
-    const fetch = require('node-fetch');
-    const url = 'https://platform.fatsecret.com/rest/server.api'
-      + '?method=foods.search'
-      + '&search_expression=' + encodeURIComponent(query)
-      + '&format=json&max_results=20&page_number=0';
-    
-    const resp = await fetch(url, {
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-    if (!resp.ok) {
-      // Token expired — retry
-      if (resp.status === 401) {
-        _fsToken = null; _fsTokenExpiry = 0;
-        const newToken = await getFatSecretToken();
-        const resp2 = await fetch(url, {
-          headers: { 'Authorization': 'Bearer ' + newToken }
-        });
-        if (!resp2.ok) return { foods: [] };
-        return parseFS(await resp2.json());
-      }
-      return { foods: [] };
-    }
-    return parseFS(await resp.json());
-  } catch (e) {
-    console.error('FatSecret error:', e);
-    throw new functions.https.HttpsError('internal', e.message);
-  }
-});
-
-function parseFS(data) {
-  const foods = data && data.foods && data.foods.food;
-  if (!foods) return { foods: [] };
-  const arr = Array.isArray(foods) ? foods : [foods];
-  const results = arr.map(f => {
-    const desc = f.food_description || '';
-    let cal = 0, prot = 0, carb = 0, fat = 0, serving = '';
-    const pm = desc.match(/^Per\\s+(.+?)\\s*-/i);
-    if (pm) serving = pm[1];
-    const cm = desc.match(/Calories:\\s*([\\d.]+)/i);
-    const fm = desc.match(/Fat:\\s*([\\d.]+)/i);
-    const cbm = desc.match(/Carbs:\\s*([\\d.]+)/i);
-    const prm = desc.match(/Protein:\\s*([\\d.]+)/i);
-    if (cm) cal = Math.round(parseFloat(cm[1]));
-    if (fm) fat = Math.round(parseFloat(fm[1]));
-    if (cbm) carb = Math.round(parseFloat(cbm[1]));
-    if (prm) prot = Math.round(parseFloat(prm[1]));
-    const brand = f.brand_name || '';
-    let name = f.food_name || '';
-    if (brand && !name.toLowerCase().includes(brand.toLowerCase())) name = brand + ' ' + name;
-    return { name, cal, prot, carb, fat, brand, serving, src: 'fatsecret' };
-  }).filter(f => f.cal > 0);
-  return { foods: results };
-}
-
-// ═══════ FCM PUSH BİLDİRİMİ ═══════
-
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-admin.initializeApp();
-
-exports.sendPushToAll = functions.https.onCall(async (data, context) => {
-  // Sadece admin erişimi
-  const ADMIN_UIDS = ['BURAYA_ADMIN_UID_GIR'];
-  if (!context.auth || !ADMIN_UIDS.includes(context.auth.uid)) {
-    throw new functions.https.HttpsError('permission-denied', 'Admin yetkisi gerekli');
-  }
-
-  const { title, body, type } = data;
-  
-  // Tüm FCM tokenlarını users koleksiyonundan topla
-  const snapshot = await admin.firestore().collection('users')
-    .where('fcmToken', '!=', null)
-    .get();
-
-  const tokens = [];
-  snapshot.forEach(doc => {
-    const token = doc.data().fcmToken;
-    if (token) tokens.push(token);
-  });
-
-  if (!tokens.length) return { sent: 0, failed: 0 };
-
-  // FCM multicast — 500'er chunk halinde
-  const chunkSize = 500;
-  let sent = 0, failed = 0;
-  
-  for (let i = 0; i < tokens.length; i += chunkSize) {
-    const chunk = tokens.slice(i, i + chunkSize);
-    const message = {
-      notification: { title, body },
-      data: { type: type || 'general', title, body },
-      tokens: chunk,
-      webpush: {
-        notification: {
-          icon: 'https://fitsofra-51176.web.app/icon-192.png',
-          badge: 'https://fitsofra-51176.web.app/badge-72.png',
-          requireInteraction: false,
-        },
-        fcmOptions: { link: 'https://fitsofra-51176.web.app' }
-      }
-    };
-    
-    const result = await admin.messaging().sendEachForMulticast(message);
-    sent += result.successCount;
-    failed += result.failureCount;
-    
-    // Başarısız tokenları temizle
-    const failedTokens = [];
-    result.responses.forEach((resp, idx) => {
-      if (!resp.success) failedTokens.push(chunk[idx]);
-    });
-    if (failedTokens.length) {
-      // Geçersiz tokenları sil
-      const batch = admin.firestore().batch();
-      snapshot.docs.forEach(doc => {
-        if (failedTokens.includes(doc.data().fcmToken)) {
-          batch.update(doc.ref, { fcmToken: admin.firestore.FieldValue.delete() });
-        }
-      });
-      await batch.commit();
-    }
-  }
-  
-  // Gönderim kaydını Firestore'a yaz
-  await admin.firestore().collection('settings').doc('notifications').set({
-    messages: admin.firestore.FieldValue.arrayUnion({
-      title, body, type, timestamp: Date.now(),
-      sent, failed, method: 'fcm'
-    })
-  }, { merge: true });
-
-  return { sent, failed, total: tokens.length };
-});`;
 
 async function loadFCMTokenCount(){
   var el=document.getElementById('fcmTokenStats');
