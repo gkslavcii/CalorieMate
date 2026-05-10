@@ -1582,71 +1582,34 @@ function _getBuiltinRecipes() {
   return (window.TURKISH_RECIPES_DB && window.TURKISH_RECIPES_DB.length) ? window.TURKISH_RECIPES_DB : [];
 }
 
-// Türkçe normalize: isim karşılaştırması için
-function _normalizeRecipeName(s) {
-  if (!s) return '';
-  return String(s).toLocaleLowerCase('tr-TR')
-    .replace(/i̇/g, 'i').replace(/ı/g, 'i')
-    .replace(/ş/g, 's').replace(/ğ/g, 'g')
-    .replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c')
-    .replace(/[^a-z0-9]/g, '');
-}
-
 function _mergeRecipes(builtIn, cloud) {
-  // Önce id bazlı, sonra normalize edilmiş isim bazlı dedup.
-  // Cloud (admin paneli) ana referans → aynı isimde built-in varsa gizlenir.
-  // Field-level merge: cloud'da olmayan alanlar built-in'den korunur.
+  // Cloud tarifler built-in ile aynı id'ye sahipse cloud versiyonu kazanır.
+  // Field-level merge: cloud'da olan alanlar built-in'i ezer; cloud'da olmayan
+  // alanlar built-in'den korunur. Bu sayede admin sadece img güncellese bile
+  // diğer alanlar (ing, steps vs.) düşmez.
   var byId = {};
-  var byNameId = {}; // normalize_name → id
   for (var i = 0; i < builtIn.length; i++) {
-    var b = builtIn[i];
-    if (b && b.id) {
-      byId[b.id] = b;
-      var bn = _normalizeRecipeName(b.name);
-      if (bn) byNameId[bn] = b.id;
-    }
+    if (builtIn[i] && builtIn[i].id) byId[builtIn[i].id] = builtIn[i];
   }
   for (var j = 0; j < cloud.length; j++) {
     var c = cloud[j];
     if (!c || !c.id) continue;
-    var cn = _normalizeRecipeName(c.name);
-    var matchId = null;
     if (byId[c.id]) {
-      matchId = c.id;
-    } else if (cn && byNameId[cn]) {
-      // Aynı isimde built-in var ama farklı id — cloud baskın olsun
-      matchId = byNameId[cn];
-    }
-    if (matchId) {
-      var existing = byId[matchId];
-      var merged = Object.assign({}, existing);
+      // Field-level override: cloud non-undefined alanlar üste yazar
+      var merged = Object.assign({}, byId[c.id]);
       Object.keys(c).forEach(function(k){
         if (c[k] !== undefined && c[k] !== null && c[k] !== '') merged[k] = c[k];
       });
-      // Cloud id'sini koru — silme/güncelleme cloud üzerinden yapılacak
-      merged.id = c.id;
-      // Eski (built-in) id altındaki kaydı kaldır, yenisini ekle
-      delete byId[matchId];
       byId[c.id] = merged;
-      // Name index'i de yenile
-      if (cn) byNameId[cn] = c.id;
     } else {
       byId[c.id] = c;
-      if (cn) byNameId[cn] = c.id;
     }
   }
-  // Sırayı koru: önce built-in'lerden sağ kalanlar, sonra cloud-only yeni tarifler
+  // Built-in sırasını koru, sonuna yeni cloud-only tarifleri ekle
   var out = [], seen = {};
   for (var k = 0; k < builtIn.length; k++) {
     var bi = builtIn[k];
-    if (!bi) continue;
-    // Built-in id'si hâlâ byId'da varsa koru
-    if (bi.id && byId[bi.id]) { out.push(byId[bi.id]); seen[bi.id] = true; continue; }
-    // Built-in cloud ile name match olduğunda byId[bi.id] silindi → cloud id'sini bul
-    var biN = _normalizeRecipeName(bi.name);
-    if (biN && byNameId[biN] && byId[byNameId[biN]] && !seen[byNameId[biN]]) {
-      out.push(byId[byNameId[biN]]); seen[byNameId[biN]] = true;
-    }
+    if (bi && bi.id && byId[bi.id]) { out.push(byId[bi.id]); seen[bi.id] = true; }
   }
   Object.keys(byId).forEach(function(id){ if(!seen[id]) out.push(byId[id]); });
   return out;
@@ -1656,37 +1619,37 @@ async function loadRecipesFromFirebase() {
   if (_recipesLoaded && RECIPES.length) return;
   var builtIn = _getBuiltinRecipes();
 
-  // Tek seferlik cache migration: yeni isim-bazlı dedup için eski cache'i sil
-  try {
-    if (!localStorage.getItem('fs_recipes_cache_migrated_v2')) {
-      localStorage.removeItem('fs_recipes_cache');
-      localStorage.removeItem('fs_recipes_cache_time');
-      localStorage.removeItem('fs_recipes_cache_ver');
-      localStorage.setItem('fs_recipes_cache_migrated_v2', '1');
-    }
-  } catch (e) {}
-
-  // Cache TTL: 5 dk (admin güncellemeleri 5 dk içinde yansır).
-  // Daha hızlı yansıma için: arka planda meta/recipes.updatedAt damgasını
-  // kontrol edip cache eski ise revalidate et.
+  // Versiyon-öncelikli cache stratejisi:
+  // 1) meta/recipes.updatedAt çek (küçük doc, hızlı)
+  // 2) Cache versiyonu == cloud versiyonu ise cache'i kullan (instant)
+  // 3) Aksi halde recipes koleksiyonunu baştan çek
+  // Bu sayede admin panelden yapılan güncellemeler bir sonraki sayfa
+  // yüklemesinde anında yansır — eski img URL'leri görünmez.
   var cached = localStorage.getItem('fs_recipes_cache');
-  var cacheTime = parseInt(localStorage.getItem('fs_recipes_cache_time') || '0');
   var cachedVersion = localStorage.getItem('fs_recipes_cache_ver') || '';
   var now = Date.now();
-  var cacheAge = now - cacheTime;
-  var cacheFresh = cached && cacheAge < 5 * 60 * 1000;
 
-  if (cacheFresh) {
+  if (typeof db !== 'undefined') {
     try {
-      var parsed = JSON.parse(cached);
-      if (parsed && parsed.length) {
-        RECIPES = _mergeRecipes(builtIn, parsed);
-        _recipesLoaded = true;
-        // Arka planda versiyon kontrolü — değişmişse sessizce yenile
-        _backgroundRevalidateRecipes(builtIn, cachedVersion);
-        return;
+      var metaSnap = await db.collection('meta').doc('recipes').get();
+      var cloudVersion = metaSnap.exists ? String(metaSnap.data().updatedAt || '') : '';
+
+      if (cached && cloudVersion && cloudVersion === cachedVersion) {
+        try {
+          var parsed = JSON.parse(cached);
+          if (parsed && parsed.length) {
+            RECIPES = _mergeRecipes(builtIn, parsed);
+            _recipesLoaded = true;
+            return;
+          }
+        } catch(e) {}
       }
-    } catch(e) {}
+      // Versiyon farklı → eski cache'i temizle, fresh çek
+      if (cloudVersion && cloudVersion !== cachedVersion) {
+        localStorage.removeItem('fs_recipes_cache');
+        localStorage.removeItem('fs_recipes_cache_time');
+      }
+    } catch(eMeta) { /* meta okunamadı, normal yola devam */ }
   }
 
   // Firebase'den çek
@@ -1698,11 +1661,11 @@ async function loadRecipesFromFirebase() {
       localStorage.setItem('fs_recipes_cache', JSON.stringify(cloudRecipes));
       localStorage.setItem('fs_recipes_cache_time', String(now));
     }
-    // Versiyon damgası
+    // Versiyon damgası (yeniden çekildi, son haliyle yaz)
     try {
-      var metaSnap = await db.collection('meta').doc('recipes').get();
-      if (metaSnap.exists) {
-        var v = String(metaSnap.data().updatedAt || '');
+      var metaSnap2 = await db.collection('meta').doc('recipes').get();
+      if (metaSnap2.exists) {
+        var v = String(metaSnap2.data().updatedAt || '');
         if (v) localStorage.setItem('fs_recipes_cache_ver', v);
       }
     } catch(eMeta) {}
@@ -1722,32 +1685,6 @@ async function loadRecipesFromFirebase() {
     _recipesLoaded = true;
   }
 }
-
-// Arka planda meta/recipes.updatedAt damgasını kontrol eder; cache versiyonu
-// eskiyse sessizce yeniden çeker. Bu sayede admin güncellemeleri en geç
-// bir sonraki sayfa yüklemesinde (cache fresh olsa bile) yansır.
-async function _backgroundRevalidateRecipes(builtIn, cachedVersion) {
-  if (typeof db === 'undefined') return;
-  try {
-    var metaSnap = await db.collection('meta').doc('recipes').get();
-    if (!metaSnap.exists) return;
-    var v = String(metaSnap.data().updatedAt || '');
-    if (!v || v === cachedVersion) return; // değişiklik yok
-
-    // Versiyon değişmiş — cloud'u tekrar çek
-    var snap = await db.collection('recipes').orderBy('name').get();
-    var cloudRecipes = snap.docs.map(function(d) { return {id: d.id, ...d.data()}; });
-    if (cloudRecipes.length) {
-      localStorage.setItem('fs_recipes_cache', JSON.stringify(cloudRecipes));
-      localStorage.setItem('fs_recipes_cache_time', String(Date.now()));
-      localStorage.setItem('fs_recipes_cache_ver', v);
-      RECIPES = _mergeRecipes(builtIn, cloudRecipes);
-      // Eğer tarif listesi UI'sı açıksa yenile
-      try { if (typeof renderRecipeList === 'function') renderRecipeList(); } catch(e){}
-    }
-  } catch(e) { /* sessiz */ }
-}
-
 
 var _currentRecipeCat='all';
 
